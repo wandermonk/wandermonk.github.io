@@ -1,0 +1,96 @@
+sudo apt-get update && sudo apt-get -y install wget ca-certificates zip net-tools tar netcat
+sudo apt-get -y install default-jdk
+java -version
+sudo sysctl vm.swappiness=1
+echo "vm.swappiness=1"| sudo tee --append /etc/sysctl.conf
+wget http://mirrors.fibergrid.in/apache/kafka/2.0.0/kafka_2.12-2.0.0.tgz
+tar -xvzf kafka_2.12-2.0.0.tgz
+
+create Zookeeper as service
+
+sudo vi /etc/init.d/zookeeper
+
+#Script for making zookeeper as a daemon
+
+#!/bin/bash
+DAEMON_PATH=/home/phyadavi/kafka_2.12-2.0.0/bin
+DAEMON_NAME=zookeeper
+PATH=$PATH:$DAEMON_PATH
+
+case "$1" in
+  start)
+        #start daemon
+        pid=$(ps ax|grep -i 'org.apache.zookeeper' | grep -v grep | awk '{print $1}')
+        if [ -n "$pid" ]
+         then
+           echo "Zookeeper is already RUNNING";
+        else
+          echo "Starting $DAEMON_NAME";
+          $DAEMON_PATH/zookeeper-server-start.sh -daemon /home/phyadavi/kafka_2.12-2.0.0/config/zookeeper.properties
+        fi
+        ;;
+   stop)
+        #stop daemon
+        echo "Shutting down $DAEMON_NAME";
+        $DAEMON_PATH/zookeeper-server-stop.sh
+        ;;
+   restart)
+         $0 stop
+         sleep 2
+         $0 start
+         ;;
+   status)
+         pid=$(ps ax | grep -i 'org.apache.zookeeper' | grep -v grep |awk '{print $1}')
+         if [ -n "$pid" ]
+           then
+           echo "Zookeeper is RUNNING PID: $pid"
+         else
+           echo "Zookeeper is not RUNNING"
+         fi
+         ;;
+   *)
+        echo "usage: $0 (start|stop|restart|status)"
+esac
+
+exit 0
+
+
+sudo chmod +x /etc/init.d/zookeeper
+ls -l /etc/init.d/|grep zookeeper
+sudo update-rc.d zookeeper defaults
+sudo mkdir -p /data/zookeeper
+sudo echo "1" > /data/zookeeper/myid
+cd kafka_2.12-2.0.0/config/
+rm zookeeper.properties
+touch zookeeper.properties
+
+dataDir=/data/zookeeper
+clientPort=2181
+maxClientCnxns=0
+tickTime=2000
+initLimit=10
+syncLimit=5
+server.1=zookeeper-1:2888:3888
+server.2=zookeeper-2:2888:3888
+server.3=zookeeper-3:2888:3888
+
+sudo service zookeeper start
+
+
+#to check if the connectivity is working between the zookeeper instances use the commands below
+nc -vz zookeeper-2 2181
+echo "ruok" | nc localhost 2181 ; echo
+echo "stat" | nc localhost 2181 ; echo
+
+#Launching zookeeper shell
+bin/zookeeper-shell.sh localhost:2181
+ls /
+create /node-1 "test"
+get /node-1 (getting info of the node)
+create /zoo-node/child-node "new child data" (creating node)
+set /zoo-node/child-node "latest child data" (updating existing data)
+rmr /zoo-node
+
+
+
+ 
